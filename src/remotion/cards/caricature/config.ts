@@ -1,38 +1,52 @@
 import type { CardConfig } from "@/lib/types";
+import type { CaricatureData } from "./types";
 
 export const config: CardConfig = {
   id: "caricature",
-  label: "Caricature",
+  label: "Caricature Love Story",
   fps: 30,
   width: 1080,
   height: 1920,
-  defaultThemeId: "light",
+  defaultThemeId: "dark",
   themes: [
     {
-      id: "light",
-      label: "Light — ivory / blush / marigold / burgundy",
+      id: "dark",
+      label: "Dark",
       palette: {
-        background: "#FFFFF0",
-        primary: "#F4C2C2",
-        secondary: "#F4C2C2",
-        accent: "#FFB81C",
-        text: "#800020",
+        background: "#2E1A2E",
+        primary: "#C48B9F",
+        secondary: "#B87333",
+        accent: "#C9A227",
+        text: "#F5F0E8",
       },
     },
     {
-      id: "dark",
-      label: "Dark — aubergine / copper / gold / ivory",
+      id: "light",
+      label: "Light",
       palette: {
-        background: "#3B1F3A",
-        primary: "#B87333",
-        secondary: "#B87333",
-        accent: "#D4AF37",
-        text: "#FFFFF0",
+        background: "#F5F0E8",
+        primary: "#F4C2C2",
+        secondary: "#B2C2A8",
+        accent: "#E6A817",
+        text: "#5B1A2A",
       },
     },
   ],
   frames: [
     { id: "frame-01", durationInFrames: 90 },
     { id: "frame-02", durationInFrames: 90 },
+    { id: "frame-03", durationInFrames: 90 },
+    { id: "frame-04", durationInFrames: 90 },
+    { id: "frame-05", durationInFrames: 90 },
+    { id: "frame-06", durationInFrames: 120 },
   ],
+};
+
+export const defaultData: CaricatureData = {
+  groomName: "Aarav",
+  brideName: "Priya",
+  weddingDate: "12 December 2026",
+  venueName: "The Grand Ballroom",
+  city: "Jaipur",
+  parentsLine: "With the blessings of Mr. & Mrs. Sharma and Mr. & Mrs. Mehta",
 };

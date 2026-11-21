@@ -1,26 +1,22 @@
-import { useTheme } from "@/remotion/ThemeContext";
-import type { CardProps } from "@/lib/types";
+import { useCurrentFrame } from "remotion";
+import { useTheme } from "../../../ThemeContext";
+import type { CinematicData } from "../types";
+import { Center, Stage, Tracked, ramp } from "./shared";
 
-const Frame01: React.FC<{ data: CardProps["data"] }> = () => {
+export default function Frame01({ data }: { data: CinematicData }) {
+  const frame = useCurrentFrame();
   const theme = useTheme();
 
-  return (
-    <div
-      style={{
-        width: "100%",
-        height: "100%",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        backgroundColor: theme.palette.background,
-        color: theme.palette.text,
-        fontSize: 48,
-        fontFamily: "sans-serif",
-      }}
-    >
-      cinematic / frame-01 / {theme.label}
-    </div>
-  );
-};
+  const opacity = ramp(frame, 0, 25);
+  const spacing = ramp(frame, 0, 25, 0.35, 0.5);
 
-export default Frame01;
+  return (
+    <Stage duration={75} vignette={[0, 0.5, 0, 70]}>
+      <Center>
+        <Tracked size={38} spacing={spacing} color={theme.palette.primary} opacity={opacity}>
+          {data.openingLine}
+        </Tracked>
+      </Center>
+    </Stage>
+  );
+}
