@@ -1,12 +1,10 @@
 import { AbsoluteFill, Img, useCurrentFrame, useVideoConfig } from "remotion";
-import manifest from "../generated/manifest.json";
+import { useVariant } from "../variant";
 import type { RoyalBlushData } from "../types";
 import { Petals } from "./Petals";
 import { WarpedPlate } from "./WarpedPlate";
-import { Divider, Icon, Lines, Twinkle, asset, progress, rand, wobble } from "./shared";
+import { Divider, Icon, Lines, Twinkle, progress, rand, wobble } from "./shared";
 
-const LANTERNS = manifest.s3.lanterns;
-const DANCERS = manifest.s3.dancers;
 const DEG = Math.PI / 180;
 
 /** Screen 3 - Ladies Sangeet: swinging lanterns, dancing girls, confetti of petals. */
@@ -14,6 +12,10 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
   const t = frame / fps;
+  const v = useVariant();
+  const L = v.L.s3;
+  const LANTERNS = v.manifest.s3.lanterns;
+  const DANCERS = v.manifest.s3.dancers;
   const zoom = 1 + 0.03 * progress(frame, 0, durationInFrames, (x) => x);
 
   // each lantern swings on its chain with its own period and phase (degrees)
@@ -27,7 +29,11 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
     <AbsoluteFill style={{ backgroundColor: "#FBEFE3", overflow: "hidden" }}>
       <AbsoluteFill style={{ transform: `scale(${zoom})`, transformOrigin: "50% 40%" }}>
         {/* still background (dancers and lanterns removed); only the flowers sway */}
-        <WarpedPlate id="s3" src={asset("s3/plate.jpg")} wind={{ mask: asset("s3/wind.png"), amp: 4.5, freq: "0.006", vx: 28, vy: 8, seed: 9 }} />
+        <WarpedPlate
+          id="s3"
+          src={v.asset("s3/plate.jpg")}
+          wind={{ mask: v.asset("s3/wind.png"), amp: 4.5, freq: "0.006", vx: 28, vy: 8, seed: 9 }}
+        />
 
         {/* hanging lanterns, each cut out and swinging about the top of its chain */}
         {LANTERNS.map((l, i) => {
@@ -36,7 +42,7 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
           return (
             <Img
               key={i}
-              src={asset(`s3/lantern-${i}.png`)}
+              src={v.asset(`s3/lantern-${i}.png`)}
               style={{
                 position: "absolute",
                 left: l.box.x,
@@ -80,14 +86,14 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
         {/* the dancers, cut out as one layer: upper bodies sway, skirts swish */}
         <WarpedPlate
           id="s3-dancers"
-          src={asset("s3/dancers.png")}
+          src={v.asset("s3/dancers.png")}
           box={DANCERS}
           base={false}
           maps={[
-            { href: asset("s3/map-da.png"), weight: sway.da },
-            { href: asset("s3/map-db.png"), weight: sway.db },
-            { href: asset("s3/map-sa.png"), weight: skirt.sa },
-            { href: asset("s3/map-sb.png"), weight: skirt.sb },
+            { href: v.asset("s3/map-da.png"), weight: sway.da },
+            { href: v.asset("s3/map-db.png"), weight: sway.db },
+            { href: v.asset("s3/map-sa.png"), weight: skirt.sa },
+            { href: v.asset("s3/map-sb.png"), weight: skirt.sb },
           ]}
         />
 
@@ -100,7 +106,7 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
             <Twinkle
               key={i}
               x={60 + rand(i + 20) * 960}
-              y={1500 + rand(i + 40) * 700 - 30 * ph}
+              y={L.glitterY + rand(i + 40) * 700 - 30 * ph}
               size={6 + 8 * rand(i + 60)}
               intensity={a * 0.85}
               color="#FFE6A8"
@@ -110,8 +116,16 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
 
         <Petals seed={3} count={14} breeze={70} fall={90} />
 
-        <Lines text={data.sangeetTitle} baseline={618} lineHeight={142} fontSize={142} at={40} weight={500} letterSpacing={2} />
-        <Divider y={842} half={235} at={68} ornament={92} />
+        <Lines
+          text={data.sangeetTitle}
+          baseline={L.title}
+          lineHeight={L.titleLH}
+          fontSize={L.titleSize}
+          at={40}
+          weight={500}
+          letterSpacing={2}
+        />
+        <Divider y={L.divider} half={235} at={68} ornament={92} />
 
         {(() => {
           // date / time / venue rows stacked from y = 985; a row may wrap to two lines and
@@ -121,10 +135,10 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
             { kind: "clock" as const, text: data.sangeetTime },
             { kind: "pin" as const, text: data.sangeetVenue },
           ].filter((r) => r.text.trim());
-          const LINE = 64;
-          const GAP = 40;
-          let y = 985;
-          return rows.map((r, i) => {
+          const LINE = L.rowLine;
+          const GAP = L.rowGap;
+          let y = L.rows;
+          const out = rows.map((r, i) => {
             const n = r.text.split("\n").length;
             const first = y;
             y += n * LINE + GAP;
@@ -132,16 +146,21 @@ export default function Frame03({ data }: { data: RoyalBlushData }) {
             return (
               <div key={r.kind}>
                 <Icon kind={r.kind} cx={300} cy={first - 21 + ((n - 1) * LINE) / 2} size={64} at={at} />
-                <Lines text={r.text} baseline={first} lineHeight={LINE} fontSize={58} at={at + 2} cx={625} stagger={6} />
+                <Lines text={r.text} baseline={first} lineHeight={LINE} fontSize={L.rowSize} at={at + 2} cx={625} stagger={6} />
               </div>
             );
           });
+          const lastRow = y - GAP - LINE; // baseline of the last row's last line
+          const lineY = Math.max(L.line, lastRow + LINE + 48);
+          return (
+            <>
+              {out}
+              <Lines text={data.sangeetLine} baseline={lineY} lineHeight={0} fontSize={L.lineSize} italic at={128} />
+              <Divider y={lineY + (L.divider2 - L.line)} half={170} at={142} ornament={64} cx={560} />
+            </>
+          );
         })()}
-
-        <Lines text={data.sangeetLine} baseline={1402} lineHeight={0} fontSize={66} italic at={128} />
-        <Divider y={1468} half={170} at={142} ornament={64} cx={560} />
       </AbsoluteFill>
-
     </AbsoluteFill>
   );
 }

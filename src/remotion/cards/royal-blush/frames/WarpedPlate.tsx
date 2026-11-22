@@ -16,7 +16,6 @@ import { AbsoluteFill, Img, continueRender, delayRender, useCurrentFrame, useVid
 
 const MAXPX = 20;
 const W = 1080;
-const H = 2624;
 // The filter region is larger than the image so the flowing noise can slide in from outside.
 const PAD = 420;
 
@@ -39,7 +38,7 @@ type Box = { x: number; y: number; w: number; h: number };
 type Props = {
   id: string;
   src: string;
-  /** Where the image sits on the 1080 x 2624 canvas (default: fills it). */
+  /** Where the image sits on the canvas (default: fills it). */
   box?: Box;
   /**
    * Draw an unwarped copy underneath (default true). Right for a full background plate;
@@ -97,8 +96,10 @@ function useInlined(urls: string[]): boolean {
   return ready;
 }
 
-export const WarpedPlate: React.FC<Props> = ({ id, src, box = { x: 0, y: 0, w: 1080, h: 2624 }, base = true, wind, ripple, maps = [] }) => {
+export const WarpedPlate: React.FC<Props> = ({ id, src, box: boxProp, base = true, wind, ripple, maps = [] }) => {
   const frame = useCurrentFrame();
+  const H = useVideoConfig().height;
+  const box = boxProp ?? { x: 0, y: 0, w: W, h: H };
   const ready = useInlined([wind?.mask, ripple?.mask, ...maps.map((m) => m.href)].filter(Boolean) as string[]);
   const inline = (u: string) => resolved.get(u) ?? u;
   const { fps } = useVideoConfig();

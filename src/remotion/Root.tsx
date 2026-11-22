@@ -10,8 +10,8 @@ import { Composition as Housewarming } from "./cards/housewarming";
 import { config as housewarming } from "./cards/housewarming/config";
 import { Composition as Cinematic } from "./cards/cinematic";
 import { config as cinematic } from "./cards/cinematic/config";
-import { Composition as RoyalBlush } from "./cards/royal-blush";
-import { config as royalBlush } from "./cards/royal-blush/config";
+import { Composition as RoyalBlush, CompositionMobile as RoyalBlushMobile } from "./cards/royal-blush";
+import { config as royalBlush, configMobile as royalBlushMobile } from "./cards/royal-blush/config";
 
 const totalFrames = (config: CardConfig) =>
   config.frames.reduce((sum, f) => sum + f.durationInFrames, 0);
@@ -23,6 +23,7 @@ const cards = [
   { config: housewarming, component: Housewarming },
   { config: cinematic, component: Cinematic },
   { config: royalBlush, component: RoyalBlush },
+  { config: royalBlushMobile, component: RoyalBlushMobile },
 ];
 
 export const Root: React.FC = () => (

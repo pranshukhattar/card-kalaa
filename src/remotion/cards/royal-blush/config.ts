@@ -27,12 +27,20 @@ export const config: CardConfig = {
     },
   ],
   frames: [
-    { id: "frame-01", durationInFrames: 225 },
-    { id: "frame-02", durationInFrames: 225 },
+    { id: "frame-01", durationInFrames: 195 },
+    { id: "frame-02", durationInFrames: 195 },
     { id: "frame-03", durationInFrames: 255 },
     { id: "frame-04", durationInFrames: 460 },
     { id: "frame-05", durationInFrames: 360 },
   ],
+};
+
+/** Same card re-laid-out at 1080 x 2340 (19.5:9) to fill the width of modern phones. */
+export const configMobile: CardConfig = {
+  ...config,
+  id: "royal-blush-mobile",
+  label: "Royal Blush (Mobile)",
+  height: 2340,
 };
 
 export const defaultData: RoyalBlushData = {

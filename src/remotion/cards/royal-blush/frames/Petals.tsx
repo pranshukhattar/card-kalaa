@@ -30,7 +30,6 @@ const PINKS = [
 ];
 
 const W = 1080;
-const H = 2624;
 
 export const Petals: React.FC<Props> = ({
   seed,
@@ -43,7 +42,7 @@ export const Petals: React.FC<Props> = ({
   opacity = 1,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, height: H } = useVideoConfig();
   const t = frame / fps;
 
   const petals = [];

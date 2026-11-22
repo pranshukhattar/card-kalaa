@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import { Easing, continueRender, delayRender, interpolate, staticFile, useCurrentFrame } from "remotion";
 
 // ------------------------------------------------------------------ assets & fonts
@@ -21,12 +21,14 @@ const FONTS = [
 ];
 
 let fontsRequested = false;
+let fontsLoaded = false;
+let fontsPromise: Promise<void> = Promise.resolve();
 /** Loads the card's bundled (OFL) fonts once; rendering waits until they are ready. */
 export function loadFonts() {
   if (fontsRequested || typeof document === "undefined") return;
   fontsRequested = true;
   const handle = delayRender("royal-blush fonts");
-  Promise.all(
+  fontsPromise = Promise.all(
     FONTS.map((f) =>
       new FontFace(f.family, `url(${asset(`fonts/${f.file}`)}) format("truetype")`, {
         weight: f.weight,
@@ -36,9 +38,45 @@ export function loadFonts() {
         .then((face) => document.fonts.add(face)),
     ),
   )
+    .then(() => undefined)
     .catch((err) => console.error("royal-blush: font load failed", err))
-    .finally(() => continueRender(handle));
+    .finally(() => {
+      fontsLoaded = true;
+      continueRender(handle);
+    });
 }
+
+/**
+ * True once the card fonts are loaded. Text is measured with the real fonts (to shrink
+ * lines that would not fit), so a component that measures re-renders when they arrive,
+ * and holds the frame until it has.
+ */
+function useFontsReady(): boolean {
+  const [ready, setReady] = useState(fontsLoaded);
+  const [handle] = useState(() => (fontsLoaded ? null : delayRender("royal-blush text fit")));
+  useEffect(() => {
+    if (!ready) fontsPromise.then(() => setReady(true));
+  }, [ready]);
+  useEffect(() => {
+    if (ready && handle !== null) continueRender(handle);
+  }, [ready, handle]);
+  return ready;
+}
+
+let measureCtx: CanvasRenderingContext2D | null = null;
+/** Advance width of text in px for a CSS font shorthand. */
+function measure(text: string, cssFont: string, letterSpacing = 0): number {
+  if (typeof document === "undefined") return 0;
+  measureCtx ??= document.createElement("canvas").getContext("2d");
+  if (!measureCtx) return 0;
+  measureCtx.font = cssFont;
+  return measureCtx.measureText(text).width + letterSpacing * Math.max(0, text.length - 1);
+}
+
+/** Text is kept at least this far from the left and right edges of the card. */
+export const SIDE_MARGIN = 90;
+const widthFor = (cx: number, align: "start" | "middle" | "end") =>
+  align === "start" ? 1080 - SIDE_MARGIN - cx : align === "end" ? cx - SIDE_MARGIN : 2 * Math.min(cx - SIDE_MARGIN, 1080 - SIDE_MARGIN - cx);
 
 // ------------------------------------------------------------------ colours
 
@@ -48,6 +86,15 @@ export const GOLD_LIGHT = "#E2B878";
 export const CREAM = "#FFF3DE";
 
 // ------------------------------------------------------------------ motion helpers
+
+/**
+ * How fast a screen's entrances play (1 = as authored). A screen given 1.25 reveals its
+ * text 25% sooner; ambient motion (petals, wind, sway, zoom) keeps the real clock.
+ */
+export const RevealSpeed = createContext(1);
+/** The frame number that text and other entrances are timed against. */
+export const useRevealFrame = () => useCurrentFrame() * useContext(RevealSpeed);
+
 
 export const EASE_OUT = Easing.bezier(0.22, 1, 0.36, 1);
 export const EASE_IN_OUT = Easing.bezier(0.45, 0, 0.55, 1);
@@ -131,6 +178,8 @@ type LinesProps = {
   cx?: number;
   align?: "start" | "middle" | "end";
   glow?: string;
+  /** Widest a line may be; longer text is scaled down to fit (default: up to the side margins). */
+  maxWidth?: number;
 };
 
 export const SOFT_GLOW = "rgba(255, 246, 234, 0.95)";
@@ -151,11 +200,19 @@ export const Lines: React.FC<LinesProps> = ({
   cx = 540,
   align = "middle",
   glow = SOFT_GLOW,
+  maxWidth,
 }) => {
-  const frame = useCurrentFrame();
+  const frame = useRevealFrame();
+  const ready = useFontsReady();
+  const lines = text.split("\n");
+  // one size for the whole block, so its lines stay the same size as each other
+  const limit = maxWidth ?? widthFor(cx, align);
+  const css = `${italic ? "italic " : ""}${weight} ${fontSize}px ${font}`;
+  const widest = ready ? Math.max(...lines.map((l) => measure(l, css, letterSpacing ?? 0))) : 0;
+  const size = widest > limit ? (fontSize * limit) / widest : fontSize;
   return (
     <>
-      {text.split("\n").map((line, i) => (
+      {lines.map((line, i) => (
         <TextBand key={i} y={baseline + i * lineHeight} size={fontSize} style={revealStyle(frame, at + i * stagger, 26, 18, glow)}>
           {(b) => (
             <text
@@ -163,7 +220,7 @@ export const Lines: React.FC<LinesProps> = ({
               y={b}
               textAnchor={align}
               fontFamily={font}
-              fontSize={fontSize}
+              fontSize={size}
               fontWeight={weight}
               fontStyle={italic ? "italic" : "normal"}
               letterSpacing={letterSpacing}
@@ -195,6 +252,8 @@ type NameProps = {
   glow?: string;
   /** Weight of the serif part. */
   weight?: number;
+  /** Widest the name may be; a longer name is scaled down (default: up to the side margins). */
+  maxWidth?: number;
 };
 
 /**
@@ -206,14 +265,30 @@ export const ScriptName: React.FC<NameProps> = ({
   suffix = "",
   baseline,
   cx = 540,
-  size,
   at,
   dur = 42,
   color = MAROON,
   glow = SOFT_GLOW,
   weight = 600,
+  maxWidth,
+  size: requested,
 }) => {
-  const frame = useCurrentFrame();
+  const frame = useRevealFrame();
+  const ready = useFontsReady();
+  const cap = name.slice(0, 1);
+  const alt = ALT_CAPS.has(cap);
+  const capScale = alt ? 1.2 : 1.3;
+  const gap = CAP_GAP[cap] ?? 0.06;
+  // width at the requested size, plus room for the capital's flourish to reach outwards
+  const total = ready
+    ? measure(cap, `400 ${requested * capScale}px ${alt ? SCRIPT_ALT : SCRIPT}`) +
+      requested * gap +
+      measure(name.slice(1), `${weight} ${requested}px ${ROMAN}`) +
+      (suffix ? requested * 0.16 + measure(suffix, `${weight - 100} ${requested * 0.82}px ${ROMAN}`) : 0) +
+      requested * 0.25
+    : 0;
+  const limit = maxWidth ?? widthFor(cx, "middle");
+  const size = total > limit ? (requested * limit) / total : requested;
   const p = progress(frame, at, dur, EASE_IN_OUT);
   const edge = -15 + p * 130; // % position of the soft writing edge
   const mask = `linear-gradient(100deg, #000 ${edge - 14}%, transparent ${edge}%)`;
@@ -231,10 +306,10 @@ export const ScriptName: React.FC<NameProps> = ({
     >
       {(b) => (
         <text x={cx} y={b} textAnchor="middle" fill={color} style={{ whiteSpace: "pre" }}>
-          <tspan fontFamily={ALT_CAPS.has(name.slice(0, 1)) ? SCRIPT_ALT : SCRIPT} fontSize={size * (ALT_CAPS.has(name.slice(0, 1)) ? 1.2 : 1.3)}>
-            {name.slice(0, 1)}
+          <tspan fontFamily={alt ? SCRIPT_ALT : SCRIPT} fontSize={size * capScale}>
+            {cap}
           </tspan>
-          <tspan fontFamily={ROMAN} fontWeight={weight} fontSize={size} dx={size * (CAP_GAP[name.slice(0, 1)] ?? 0.06)}>
+          <tspan fontFamily={ROMAN} fontWeight={weight} fontSize={size} dx={size * gap}>
             {name.slice(1)}
           </tspan>
           {suffix && (
@@ -264,7 +339,7 @@ type DividerProps = {
 
 /** Thin gold rule with a small floral ornament; the rule draws outward from the centre. */
 export const Divider: React.FC<DividerProps> = ({ y, cx = 540, half, at, color = GOLD, ornament = 62, dur = 34 }) => {
-  const frame = useCurrentFrame();
+  const frame = useRevealFrame();
   const draw = progress(frame, at + 6, dur, EASE_IN_OUT);
   const orn = progress(frame, at, 22);
   const gap = ornament / 2 + 4;
@@ -332,7 +407,7 @@ const Ornament: React.FC = () => (
 type IconProps = { cx: number; cy: number; size?: number; at: number; color?: string; kind: "calendar" | "clock" | "pin" };
 
 export const Icon: React.FC<IconProps> = ({ cx, cy, size = 50, at, color = MAROON, kind }) => {
-  const frame = useCurrentFrame();
+  const frame = useRevealFrame();
   const p = progress(frame, at, 22);
   return (
     <svg

@@ -1,11 +1,10 @@
 import type { ReactNode } from "react";
-import { AbsoluteFill, interpolate, useCurrentFrame } from "remotion";
+import { AbsoluteFill, interpolate, useCurrentFrame, useVideoConfig } from "remotion";
 import { EASE_IN_OUT, EASE_OUT, Twinkle, progress, rand } from "./shared";
 
 export type TransitionKind = "intro" | "crossfade" | "splash" | "wash" | "dusk";
 
 const W = 1080;
-const H = 2624;
 
 /**
  * Wraps the INCOMING screen. Its Sequence starts `dur` frames before the previous screen
@@ -86,13 +85,15 @@ const BLOOMS = [
 ];
 
 const Splash: React.FC<{ p: number; children: ReactNode }> = ({ p, children }) => {
+  const H = useVideoConfig().height;
+  const ky = H / 2624; // bloom centres were placed on the tall card
   // The colour blooms first; the new screen opens inside it a beat later.
   const radius = (b: (typeof BLOOMS)[number], lag: number) => {
     const q = interpolate(p, [b.delay + lag, 1 - (0.18 - lag)], [0, 1], { extrapolateLeft: "clamp", extrapolateRight: "clamp" });
     return EASE_IN_OUT(q) * b.max;
   };
-  const reveal = BLOOMS.map((b, i) => blobPath(b.cx, b.cy, radius(b, 0.18), i + 1)).join(" ");
-  const bloom = BLOOMS.map((b, i) => blobPath(b.cx, b.cy, radius(b, 0) * 1.08, i + 7)).join(" ");
+  const reveal = BLOOMS.map((b, i) => blobPath(b.cx, b.cy * ky, radius(b, 0.18), i + 1)).join(" ");
+  const bloom = BLOOMS.map((b, i) => blobPath(b.cx, b.cy * ky, radius(b, 0) * 1.08, i + 7)).join(" ");
   const tint = 1 - progress(p * 100, 72, 28);
   return (
     <AbsoluteFill>
@@ -122,6 +123,7 @@ const Splash: React.FC<{ p: number; children: ReactNode }> = ({ p, children }) =
 // ------------------------------------------------------------------ wash: a golden sweep down
 
 const Wash: React.FC<{ p: number; children: ReactNode }> = ({ p, children }) => {
+  const H = useVideoConfig().height;
   const e = EASE_IN_OUT(p);
   const y = -260 + e * (H + 520);
   const edge = (x: number) => y + 46 * Math.sin(x / 140 + 1.3) + 22 * Math.sin(x / 61 + 4.1) + 12 * Math.sin(x / 23 + p * 6);
