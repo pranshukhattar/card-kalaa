@@ -29,19 +29,13 @@ export const Transition: React.FC<{ kind: TransitionKind; dur: number; children:
   }
 };
 
-// ------------------------------------------------------------------ intro: out of warm light
+// ------------------------------------------------------------------ intro: cross-fade in from black
 
 const Intro: React.FC<{ p: number; children: ReactNode }> = ({ p, children }) => {
-  const e = EASE_OUT(p);
+  const e = EASE_IN_OUT(p);
   return (
-    <AbsoluteFill style={{ backgroundColor: "#FBEFE3" }}>
-      <AbsoluteFill style={{ opacity: e, transform: `scale(${1.05 - 0.05 * e})` }}>{children}</AbsoluteFill>
-      <AbsoluteFill
-        style={{
-          background: "radial-gradient(ellipse at 50% 40%, rgba(255,248,236,0.95), rgba(255,240,222,0) 70%)",
-          opacity: 1 - e,
-        }}
-      />
+    <AbsoluteFill style={{ backgroundColor: "#000" }}>
+      <AbsoluteFill style={{ opacity: e, transform: `scale(${1.03 - 0.03 * EASE_OUT(p)})` }}>{children}</AbsoluteFill>
     </AbsoluteFill>
   );
 };

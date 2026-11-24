@@ -29,9 +29,10 @@ export const config: CardConfig = {
   frames: [
     { id: "frame-01", durationInFrames: 195 },
     { id: "frame-02", durationInFrames: 195 },
-    { id: "frame-03", durationInFrames: 255 },
+    // frame-03 (Ladies Sangeet) is not part of this card any more; frames/Frame03.tsx is kept unused
     { id: "frame-04", durationInFrames: 460 },
-    { id: "frame-05", durationInFrames: 360 },
+    // 360 frames of thank-you screen + 24 frames of black at the very end (see END_* in index.tsx)
+    { id: "frame-05", durationInFrames: 384 },
   ],
 };
 

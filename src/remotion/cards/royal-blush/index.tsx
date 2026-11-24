@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { AbsoluteFill, Audio, Sequence, interpolate, staticFile } from "remotion";
+import { AbsoluteFill, Audio, Sequence, interpolate, staticFile, useCurrentFrame } from "remotion";
 import type { CardProps } from "@/lib/types";
 import { getTheme } from "@/lib/theme";
 import { ThemeContext } from "@/remotion/ThemeContext";
@@ -7,11 +7,10 @@ import { config, defaultData } from "./config";
 import type { RoyalBlushData } from "./types";
 import Frame01 from "./frames/Frame01";
 import Frame02 from "./frames/Frame02";
-import Frame03 from "./frames/Frame03";
 import Frame04 from "./frames/Frame04";
 import Frame05 from "./frames/Frame05";
 import { Transition, type TransitionKind } from "./frames/transitions";
-import { RevealSpeed, loadFonts } from "./frames/shared";
+import { EASE_IN_OUT, RevealSpeed, loadFonts } from "./frames/shared";
 import { VARIANTS, VariantContext, type VariantId } from "./variant";
 
 loadFonts();
@@ -19,7 +18,6 @@ loadFonts();
 const FRAMES: Record<string, ComponentType<{ data: RoyalBlushData }>> = {
   "frame-01": Frame01,
   "frame-02": Frame02,
-  "frame-03": Frame03,
   "frame-04": Frame04,
   "frame-05": Frame05,
 };
@@ -30,9 +28,8 @@ const FRAMES: Record<string, ComponentType<{ data: RoyalBlushData }>> = {
  * count from the start of its transition.
  */
 export const TRANSITIONS: Record<string, { kind: TransitionKind; dur: number }> = {
-  "frame-01": { kind: "intro", dur: 30 },
+  "frame-01": { kind: "intro", dur: 30 }, // cross-fade in from black
   "frame-02": { kind: "crossfade", dur: 30 },
-  "frame-03": { kind: "splash", dur: 42 },
   "frame-04": { kind: "wash", dur: 40 },
   "frame-05": { kind: "dusk", dur: 48 },
 };
@@ -47,7 +44,25 @@ const REVEAL_SPEED: Record<string, number> = { "frame-01": 1.21, "frame-02": 1.2
 /** Background music: the track from the "Pallavi Card V1" edit (see public/cards/royal-blush/audio). */
 const MUSIC = "cards/royal-blush/audio/pallavi-card-v1.wav";
 const FADE_IN = 9; // 0.3 s
-const FADE_OUT = 24; // 0.8 s, ending exactly at the last frame
+
+// The card ends on black: the last screen cross-fades to black, black holds briefly, and the
+// music fades out over the last 2 s so it stops END_HOLD frames (0.8 s, < 1 s) after the
+// picture has gone fully black.
+const END_FADE = 30; // 1 s picture -> black
+const END_HOLD = 24; // 0.8 s of black
+const MUSIC_FADE_OUT = 60; // 2 s, ending on the last frame
+
+const EndToBlack: React.FC<{ total: number }> = ({ total }) => {
+  const frame = useCurrentFrame();
+  const start = total - END_HOLD - END_FADE;
+  if (frame < start) return null;
+  const o = interpolate(frame, [start, start + END_FADE], [0, 1], {
+    extrapolateLeft: "clamp",
+    extrapolateRight: "clamp",
+    easing: EASE_IN_OUT,
+  });
+  return <AbsoluteFill style={{ backgroundColor: "#000", opacity: o }} />;
+};
 
 export type CardCompositionProps = {
   config: typeof config;
@@ -72,7 +87,7 @@ const makeComposition = (variant: VariantId): React.FC<CardCompositionProps> => 
             <Audio
               src={staticFile(MUSIC)}
               volume={(f) =>
-                interpolate(f, [0, FADE_IN, total - FADE_OUT, total - 1], [0, 1, 1, 0], {
+                interpolate(f, [0, FADE_IN, total - MUSIC_FADE_OUT, total - 1], [0, 1, 1, 0], {
                   extrapolateLeft: "clamp",
                   extrapolateRight: "clamp",
                 })
@@ -95,6 +110,7 @@ const makeComposition = (variant: VariantId): React.FC<CardCompositionProps> => 
                 </Sequence>
               );
             })}
+            <EndToBlack total={total} />
           </AbsoluteFill>
         </ThemeContext.Provider>
       </VariantContext.Provider>
