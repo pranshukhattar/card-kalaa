@@ -12,6 +12,8 @@ import { Composition as Cinematic } from "./cards/cinematic";
 import { config as cinematic } from "./cards/cinematic/config";
 import { Composition as RoyalBlush, CompositionMobile as RoyalBlushMobile } from "./cards/royal-blush";
 import { config as royalBlush, configMobile as royalBlushMobile } from "./cards/royal-blush/config";
+import { Composition as HaldiSangeet, CompositionMobile as HaldiSangeetMobile } from "./cards/haldi-sangeet";
+import { config as haldiSangeet, configMobile as haldiSangeetMobile } from "./cards/haldi-sangeet/config";
 
 const totalFrames = (config: CardConfig) =>
   config.frames.reduce((sum, f) => sum + f.durationInFrames, 0);
@@ -24,6 +26,8 @@ const cards = [
   { config: cinematic, component: Cinematic },
   { config: royalBlush, component: RoyalBlush },
   { config: royalBlushMobile, component: RoyalBlushMobile },
+  { config: haldiSangeet, component: HaldiSangeet },
+  { config: haldiSangeetMobile, component: HaldiSangeetMobile },
 ];
 
 export const Root: React.FC = () => (
